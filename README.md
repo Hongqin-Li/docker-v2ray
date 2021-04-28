@@ -8,17 +8,27 @@
 
 - 域名注册：freenom 可以免费注册，但国内好像比较麻烦，推荐 [Godaddy](https://www.godaddy.com/)
 
-* VPS推荐 [Vultr]()，即可获得$100，推荐上新的 <a href="https://www.aliyunhost.net/vultr-korea-datacenter-launch/" target="_blank">Vultr韩国机房</a> 。
+- VPS：推荐 [Vultr]()，即可获得$100，推荐上新的 <a href="https://www.aliyunhost.net/vultr-korea-datacenter-launch/" target="_blank">Vultr韩国机房</a> 。
 
+然后在域名设置中，添加一条 A 记录，值为 VPS 的 IP 地址
 
 
 ## 2 服务端配置
+
+你可以使用如下的一键脚本，并按提示输入域名和邮箱，如果成功运行，则可跳过这一节
+
+```bash
+sudo apt install -y git
+git clone https://github.com/Hongqin-Li/docker-v2ray.git
+cd docker-v2ray
+bash run.sh
+```
 
 以下操作均以 root 用户进行
 
 ### 2.1 安装 Docker
 
-* 安装
+- 安装
 
 ```bash
 $ curl -fsSL https://get.docker.com -o get-docker.sh
@@ -27,19 +37,19 @@ $ sh get-docker.sh
 
 **注：** 这一步如果是CENTOS 8，可能会出现 `requires containerd.io >= 1.2.2-3错误` -> [解决办法](https://www.4spaces.org/docker-ce-install-containerd-io-error/)。
 
-* 添加用户到用户组(需退出当前会话重启登录才生效)
+- 添加用户到用户组(需退出当前会话重启登录才生效)
 
 ```bash
 $ gpasswd -a $USER docker
 ```
 
-* 启动
+- 启动
 
 ```bash
 $ systemctl start docker
 ```
 
-* 设置 Docker 开机自启动
+- 设置 Docker 开机自启动
 
 ```bash
 $ systemctl enable docker
@@ -64,7 +74,7 @@ $ git clone https://github.com/Hongqin-Li/docker-v2ray.git
 
 ### 2.3 修改 v2ray 配置
 
-进入`docker-v2ray`目录开始修改配置。
+进入 `docker-v2ray` 目录开始修改配置。
 
 1. 修改 `init-letsencrypt.sh` 中的 `domains` 和 `email` 为自己的域名和邮箱。
 2. 修改 `data/v2ray/config.json` 中的 ID 为**随机 ID**，如 `"id": "bae399d4-13a4-46a3-b144-4af2c0004c2e"`。
