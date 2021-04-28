@@ -1,28 +1,26 @@
-# 使用docker-compose以ws+tls方式快速部署科学上网利器v2ray
+# V2ray Quick Start
+
+用 Docker 一键部署基于 WebSocket + TLS 的 v2ray
 
 
-## 更新日志
 
-* 2020年3月3日：增加v2ray并使用ws+tls方式实现代理服务；
-* 2020年3月1日：增加nginx服务并启用certbot证书；
+## 1 获取域名及 VPS
 
-## 使用步骤
+- 域名注册：freenom 可以免费注册，但国内好像比较麻烦，推荐 [Godaddy](https://www.godaddy.com/)
 
-1. 获取域名及VPS
-
-* 免费域名注册： <a href="https://www.freenom.com/zh/index.html?lang=zh" target="_blank">免费域名申请</a>；；
-* VPS推荐搬瓦工，支持支付宝付款： <a href="https://www.4spaces.org/best-details-to-buy-banwagonhost/" target="_blank">史上最详细搬瓦工VPS注册/购买图文教程(内附优惠券)</a>
-* 搬瓦工： <a href="https://www.4spaces.org/bwg/static/promotion.html" target="_blank">当前促销方案</a>
-* 通过此【<a href="https://www.vultr.com/?ref=7365575" target="_blank" rel="noopener noreferrer">链接</a>】注册Vultr VPS，即可获得$100，推荐上新的 <a href="https://www.aliyunhost.net/vultr-korea-datacenter-launch/" target="_blank">Vultr韩国机房</a> 。
+* VPS推荐 [Vultr]()，即可获得$100，推荐上新的 <a href="https://www.aliyunhost.net/vultr-korea-datacenter-launch/" target="_blank">Vultr韩国机房</a> 。
 
 
-2. 安装docker-ce并启动
 
-以下操作我都是以root用户进行的。
+## 2 服务端配置
+
+以下操作均以 root 用户进行
+
+### 2.1 安装 Docker
 
 * 安装
 
-```
+```bash
 $ curl -fsSL https://get.docker.com -o get-docker.sh
 $ sh get-docker.sh
 ```
@@ -31,74 +29,78 @@ $ sh get-docker.sh
 
 * 添加用户到用户组(需退出当前会话重启登录才生效)
 
-```
-gpasswd -a $USER docker
+```bash
+$ gpasswd -a $USER docker
 ```
 
 * 启动
 
-```
-systemctl start docker
-```
-
-* 设置docker开机自启动
-
-```
-systemctl enable docker
+```bash
+$ systemctl start docker
 ```
 
-3. 安装`docker-compose`
+* 设置 Docker 开机自启动
 
+```bash
+$ systemctl enable docker
 ```
-$  curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 
+- 安装 `docker-compose`
+
+```bash
+$ curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 $ chmod +x /usr/local/bin/docker-compose
-
 $ ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
 ```
 
-4. 安装git并clone代码
+### 2.2 安装 git 并 clone 代码
 
-```
-yum -y install git
-
-
-git clone https://github.com/aitlp/docker-v2ray.git
+```bash
+$ sudo apt install -y git
+$ git clone https://github.com/Hongqin-Li/docker-v2ray.git
 ```
 
 或者你可以下载后在上传到你的VPS。
 
-5. 修改v2ray配置
+### 2.3 修改 v2ray 配置
 
 进入`docker-v2ray`目录开始修改配置。
 
-**1) `init-letsencrypt.sh`**
+1. 修改 `init-letsencrypt.sh` 中的 `domains` 和 `email` 为自己的域名和邮箱。
+2. 修改 `data/v2ray/config.json` 中的 ID 为**随机 ID**，如 `"id": "bae399d4-13a4-46a3-b144-4af2c0004c2e"`。
+3. 修改 `data/nginx/conf.d/v2ray.conf` 中所有`your_domain`为自己的域名。
 
-将里面的`domains`和`email`修改为自己的域名和邮箱。
+### 2.4 部署v2ray
 
-**2) `docker-compose.yml`**
-
-可以不用动。
-
-**3) `data/v2ray/config.json`**
-
-修改ID，`"id": "bae399d4-13a4-46a3-b144-4af2c0004c2e"`，也可以不修改。
-
-**4) `data/nginx/conf.d/v2ray.conf`**
-
-修改所有`your_domain`为自己的域名，其他地方，如果上面可以修改的地方你没修改，那么除了域名之外的也不用修改了。
-
-6. 一键部署v2ray
-
-```
-chmod +x ./init-letsencrypt.sh
-
-bash init-letsencrypt.sh
+```bash
+$ bash init-letsencrypt.sh
 ```
 
-7. 进行v2ray客户端配置
+
+
+## 3 客户端配置
+
+无论是哪个平台，均需要配置如下几项
+
+- 采用 VMESS 协议
+- 填入地址、端口（443）、用户 ID、额外 ID、等级、网络类型（ws）
+- 勾选 tls
+
+Android 使用 [v2rayNG](https://github.com/2dust/v2rayNG)，到 release 中下载对应版本，我用的是 [v2rayNG_1.4.13_arm64-v8a.apk](https://github.com/2dust/v2rayNG/releases/download/1.4.13/v2rayNG_1.4.13_arm64-v8a.apk)，然后正常配置即可
+
+Linux 使用 [v2rayA](https://github.com/v2rayA/v2rayA)，按 [wiki](https://github.com/v2rayA/v2rayA/wiki/Usage) 安装后到 http://localhost:2017 中进行配置即可
+
+Windows 使用 [V2RayW](https://github.com/Cenmrev/V2RayW)
+
+1. 配置中填入端口（443）、地址、用户 ID、额外 ID、等级、加密方式（auto）、网络类型（ws）
+2. 传输设置的 Websocket 一栏：路径填 `/v2ray`
+3. 传输设置的 TLS 一栏：勾选“传输层加密 TLS”，其他都不勾，服务器域名填入你的域名，应用层协议协商 ALPN 填默认的 `http/1.1`
+
+
 
 现在你可以开始使用了。
+
+## 参考资料
 
 细节参考： <a href="https://www.4spaces.org/docker-compose-install-v2ray-ws-tls/" target="_blank" rel="noopener noreferrer">在docker-compose环境下以ws+tls方式搭建v2ray(So easy)</a>
 
