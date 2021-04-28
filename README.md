@@ -15,7 +15,9 @@
 
 ## 2 服务端配置
 
-你可以使用如下的一键脚本，并按提示输入域名和邮箱，如果成功运行，则可跳过这一节
+以下操作均以 root 用户进行
+
+你可以使用如下的一键脚本，并按提示输入域名和邮箱，然后 Let's Encrypt 验证时输入邮箱并输入 Yes
 
 ```bash
 sudo apt install -y git
@@ -24,7 +26,7 @@ cd docker-v2ray
 bash run.sh
 ```
 
-以下操作均以 root 用户进行
+如果成功运行，则跳过这一节
 
 ### 2.1 安装 Docker
 
@@ -93,7 +95,7 @@ $ bash init-letsencrypt.sh
 无论是哪个平台，均需要配置如下几项
 
 - 采用 VMESS 协议
-- 填入地址、端口（443）、用户 ID、额外 ID、等级、网络类型（ws）
+- 填入地址、端口（443）、用户 ID、额外 ID、等级、网络类型（ws），和 `data/v2ray/config.json` 中的值对应
 - 勾选 tls
 
 Android 使用 [v2rayNG](https://github.com/2dust/v2rayNG)，到 release 中下载对应版本，我用的是 [v2rayNG_1.4.13_arm64-v8a.apk](https://github.com/2dust/v2rayNG/releases/download/1.4.13/v2rayNG_1.4.13_arm64-v8a.apk)，然后正常配置即可
