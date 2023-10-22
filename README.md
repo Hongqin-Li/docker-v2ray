@@ -112,6 +112,25 @@ Windows 使用 [V2RayW](https://github.com/Cenmrev/V2RayW)
 
 现在你可以开始使用了。
 
+## 4 问题诊断
+
+```sh
+# 检查dns解析
+nslookup $YOUR_DOMAIN
+
+# 检查服务端ip是否连得上
+ping $YOUR_IP
+
+# 检查服务端默认的v2ray服务端口是否连得上
+ping -p 443 $YOUR_IP
+
+# 检查本地客户端的代理是否有效，10808是config.json里面inbounds的端口
+curl --proxy curl --proxy "socks://127.0.0.1:10808" https://www.google.com
+```
+
+1. 服务端 ip 连接得上，但v2ray服务端口连不上：可能端口被封了，服务端更改 run.sh 中的 PORT 并重新配置，客户端配置换成新端口
+
+
 ## 参考资料
 
 细节参考： <a href="https://www.4spaces.org/docker-compose-install-v2ray-ws-tls/" target="_blank" rel="noopener noreferrer">在docker-compose环境下以ws+tls方式搭建v2ray(So easy)</a>

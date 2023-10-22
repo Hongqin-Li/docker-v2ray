@@ -13,7 +13,7 @@ services:
       - ./data/certbot/www:/var/www/certbot
     ports:
       - "80:80"
-      - "443:443"
+      - "443:443" #YOUR_PORT
     links:
       - v2ray:v2ray #连接v2ray容器，映射主机名，此处非常重要，如果没有这个映射nginx就无法连接v2ray的websocket服务
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
