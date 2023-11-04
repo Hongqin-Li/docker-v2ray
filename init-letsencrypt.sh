@@ -6,9 +6,9 @@ if ! [ -x "$(command -v docker-compose)" ]; then
 fi
 
 domains="YOUR_DOMAIN" #YOUR_DOMAIN
-email="YOUR_EMAIL" #YOUR_EMAIL Adding a valid address is strongly recommended
 rsa_key_size=4096
 data_path="./data/certbot"
+email="YOUR_EMAIL" #YOUR_EMAIL Adding a valid address is strongly recommended
 staging=0 # Set to 1 if you're testing your setup to avoid hitting request limits
 
 if [ -d "$data_path" ]; then
@@ -46,7 +46,7 @@ echo "}" >> ./data/nginx/conf.d/v2ray.conf
 path="/etc/letsencrypt/live/$domains"
 mkdir -p "$data_path/conf/live/$domains"
 docker-compose run --rm --entrypoint "\
-  openssl req -x509 -nodes -newkey rsa:1024 -days 1\
+  openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
     -keyout '$path/privkey.pem' \
     -out '$path/fullchain.pem' \
     -subj '/CN=localhost'" certbot

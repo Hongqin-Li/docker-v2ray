@@ -2,100 +2,45 @@
 
 用 Docker 一键部署基于 WebSocket + TLS 的 v2ray
 
-
-
 ## 1 获取域名及 VPS
+
+- VPS：推荐 [Vultr](https://www.vultr.com/)
 
 - 域名注册：freenom 可以免费注册，但国内好像比较麻烦，推荐 [Godaddy](https://www.godaddy.com/)
 
-- VPS：推荐 [Vultr]()，即可获得$100，推荐上新的 <a href="https://www.aliyunhost.net/vultr-korea-datacenter-launch/" target="_blank">Vultr韩国机房</a> 。
-
 然后在域名设置中，添加一条 A 记录，值为 VPS 的 IP 地址
-
 
 ## 2 服务端配置
 
-以下操作均以 root 用户进行
+以 root 用户运行运行如下脚本，`run.sh` 的参数依次为域名、邮箱、端口、websocket 路径、用户 ID，未填入的字段将随机生成；过程中 Let's Encrypt 验证时输入邮箱并输入 Yes
 
-你可以使用如下的一键脚本，并按提示输入域名和邮箱，然后 Let's Encrypt 验证时输入邮箱并输入 Yes
-
-```bash
+```sh
 sudo apt install -y git
 git clone https://github.com/Hongqin-Li/docker-v2ray.git
 cd docker-v2ray
-bash run.sh
+bash run.sh example.com example@gmail.com 443 /v2ray
 ```
 
-如果成功运行，则跳过这一节
+查看生成的配置信息，对应于下文带 $ 的字段
 
-### 2.1 安装 Docker
-
-- 安装
-
-```bash
-$ curl -fsSL https://get.docker.com -o get-docker.sh
-$ sh get-docker.sh
+```sh
+cat config.txt
 ```
 
-**注：** 这一步如果是CENTOS 8，可能会出现 `requires containerd.io >= 1.2.2-3错误` -> [解决办法](https://www.4spaces.org/docker-ce-install-containerd-io-error/)。
+如果想要修改配置，则重新执行 `run.sh`，并在遇到替换证书时直接退出即可，然后重启 docker 服务
 
-- 添加用户到用户组(需退出当前会话重启登录才生效)
-
-```bash
-$ gpasswd -a $USER docker
+```sh
+docker compose down
+bash run.sh example2.com example2@gmail.com 4016 /v2ray2 44911282-01cc-4188-a0ba-21db91e9c864
+docker compose up -d
 ```
-
-- 启动
-
-```bash
-$ systemctl start docker
-```
-
-- 设置 Docker 开机自启动
-
-```bash
-$ systemctl enable docker
-```
-
-- 安装 `docker-compose`
-
-```bash
-$ curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-$ chmod +x /usr/local/bin/docker-compose
-$ ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
-```
-
-### 2.2 安装 git 并 clone 代码
-
-```bash
-$ sudo apt install -y git
-$ git clone https://github.com/Hongqin-Li/docker-v2ray.git
-```
-
-或者你可以下载后在上传到你的VPS。
-
-### 2.3 修改 v2ray 配置
-
-进入 `docker-v2ray` 目录开始修改配置。
-
-1. 修改 `init-letsencrypt.sh` 中的 `domains` 和 `email` 为自己的域名和邮箱。
-2. 修改 `data/v2ray/config.json` 中的 ID 为**随机 ID**，如 `"id": "bae399d4-13a4-46a3-b144-4af2c0004c2e"`。
-3. 修改 `data/nginx/conf.d/v2ray.conf` 中所有`your_domain`为自己的域名。
-
-### 2.4 部署v2ray
-
-```bash
-$ bash init-letsencrypt.sh
-```
-
-
 
 ## 3 客户端配置
 
 无论是哪个平台，均需要配置如下几项
 
 - 采用 VMESS 协议
-- 填入地址、端口（443）、用户 ID、额外 ID、等级、网络类型（ws），和 `data/v2ray/config.json` 中的值对应
+- 填入服务器 IP 地址、域名 `$DOMAIN`、端口 `$PORT`、用户 ID `$UUID`、额外 ID（64）、等级（1）、网络类型（ws）、websocket 路径 `$WSPATH`
 - 勾选 tls
 
 Android 使用 [v2rayNG](https://github.com/2dust/v2rayNG)，到 release 中下载对应版本，我用的是 [v2rayNG_1.4.13_arm64-v8a.apk](https://github.com/2dust/v2rayNG/releases/download/1.4.13/v2rayNG_1.4.13_arm64-v8a.apk)，然后正常配置即可
@@ -104,11 +49,9 @@ Linux 使用 [v2rayA](https://github.com/v2rayA/v2rayA)，按 [wiki](https://git
 
 Windows 使用 [V2RayW](https://github.com/Cenmrev/V2RayW)
 
-1. 配置中填入端口（443）、地址、用户 ID、额外 ID、等级、加密方式（auto）、网络类型（ws）
-2. 传输设置的 Websocket 一栏：路径填 `/v2ray`
+1. 配置中填入端口、地址、用户 ID、额外 ID、等级、加密方式（auto）、网络类型（ws）
+2. 传输设置的 Websocket 一栏：路径填 `$WSPATH`
 3. 传输设置的 TLS 一栏：勾选“传输层加密 TLS”，其他都不勾，服务器域名填入你的域名，应用层协议协商 ALPN 填默认的 `http/1.1`
-
-
 
 现在你可以开始使用了。
 
@@ -116,13 +59,13 @@ Windows 使用 [V2RayW](https://github.com/Cenmrev/V2RayW)
 
 ```sh
 # 检查dns解析
-nslookup $YOUR_DOMAIN
+nslookup $DOMAIN
 
 # 检查服务端ip是否连得上
-ping $YOUR_IP
+ping $IP
 
 # 检查服务端默认的v2ray服务端口是否连得上
-ping -p 443 $YOUR_IP
+telnet $IP $PORT
 
 # 检查本地客户端的代理是否有效，10808是config.json里面inbounds的端口
 curl --proxy curl --proxy "socks://127.0.0.1:10808" https://www.google.com
