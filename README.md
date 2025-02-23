@@ -4,9 +4,9 @@
 
 ## 1 获取域名及 VPS
 
-- VPS：推荐 [Vultr](https://www.vultr.com/)
+- VPS：推荐 [Vultr](https://www.vultr.com/)、[EVOXT](https://console.evoxt.com/)
 
-- 域名注册：freenom 可以免费注册，但国内好像比较麻烦，推荐 [Godaddy](https://www.godaddy.com/)
+- 域名注册：freenom 可以免费注册，但国内好像比较麻烦，推荐 [Godaddy](https://www.godaddy.com/)、阿里云
 
 然后在域名设置中，添加一条 A 记录，值为 VPS 的 IP 地址
 
