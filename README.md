@@ -53,6 +53,12 @@ Windows 使用 [V2RayW](https://github.com/Cenmrev/V2RayW)
 2. 传输设置的 Websocket 一栏：路径填 `$WSPATH`
 3. 传输设置的 TLS 一栏：勾选“传输层加密 TLS”，其他都不勾，服务器域名填入你的域名，应用层协议协商 ALPN 填默认的 `http/1.1`
 
+MacOS（x86） 使用 [V2RayX](https://github.com/Cenmrev/V2RayX)
+
+1. 配置中填入地址、端口、用户 ID、额外 ID、等级、加密方式（auto）、网络类型（ws）
+2. transport settings 的 WebSocket 一栏： path 填 `$WSPATH`，headers 填 `{"Host" : "$DOMAIN" }`
+3. transport settings 的 TLS 一栏：勾选 Use TLS，其他都不勾，TLS serverName 填入你的域名，alpn 填 `http/1.1`
+
 现在你可以开始使用了。
 
 ## 4 问题诊断
