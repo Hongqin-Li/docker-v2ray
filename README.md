@@ -27,7 +27,7 @@ bash ./install-deps.sh
 
 安装器自动识别系统、架构和现有依赖；缺失时补齐，已经可用时跳过。安装需要 root，普通用户执行时会自动调用 sudo；后续部署也需要有 Docker 权限的用户。支持 Ubuntu **20.04 / 22.04 / 24.04 / 26.04**、Debian **11 / 12 / 13**，amd64 / arm64。只需首次运行 `init`，已有配置时直接 `up`。
 
-服务端默认 **TCP 8443**，本机 Linux 客户端默认 **HTTP 1187 / SOCKS 1180**，与旧方案的 443 / 1087 / 1080 分开。VPS 控制台及主机防火墙需允许所选 TCP 端口；脚本不修改防火墙，遇到端口占用会停止。无需自有域名、证书或 Nginx 转发。
+服务端默认监听 **TCP 8443**，与旧 V2Ray 服务端的 **TCP 443** 分开。VPS 控制台及主机防火墙需允许所选 TCP 端口；脚本不修改防火墙，遇到端口占用会停止。无需自有域名、证书或 Nginx 转发。
 
 `www.amazon.com` 是可替换的 REALITY 目标 / SNI 示例，不是 VPS 的地址。初始化会检查其证书、TLS 1.3 和 h2，失败时不生成凭据。必要时增加 `--target 域名或IP:443`，证书必须匹配 `--sni`；更换目标后仍要验证真实代理访问。Xray 可能提示非 443 端口的识别风险；8443 用于与旧服务并行，协议切换不保证不会被封锁，也不能改变同一 VPS 的线路质量。
 
@@ -172,6 +172,8 @@ iOS 以 **Shadowrocket 2.2.92** 为兼容性参考。当前选择用于避开该
 
 先按 [服务端步骤](#xray-start) 在服务器初始化并启动 Xray。此客户端使用独立目录及端口，不需要 root，不替换原有 V2Ray 二进制或 `config2.json`。
 
+以下“本机”指运行 Codex、curl 等应用的 Linux 电脑。Xray 客户端默认在这台电脑的 `127.0.0.1` 上监听 **HTTP 1187 / SOCKS 1180**，供本机应用连接，再由客户端连接 VPS 的 **TCP 8443**。1187 / 1180 与旧客户端的 1087 / 1080 分开，便于两套客户端并行运行；无需在 VPS 防火墙中开放这两个客户端端口。
+
 默认连接关系：
 
 ```text
@@ -180,91 +182,25 @@ Codex / curl → 127.0.0.1:1187（HTTP）或 :1180（SOCKS5）
             → 目标网站
 ```
 
-<a id="xray-temp-test"></a>
-
-#### 临时测试：不安装服务，不改本机配置
-
-服务端必须已经完成 `init` / `up`。以下方法只在 `mktemp` 创建的目录内下载 Xray、复制客户端配置并启动进程，退出时停止该进程并删除目录。不会创建 systemd 服务，也不会修改旧 V2Ray、shell 启动文件或 Codex 配置。
-
-依赖 `bash`、`curl`、`sha256sum`、`python3`、`install`、`scp` 以及已登录的 Codex。下列 Codex 参数在 **CLI 0.156.0** 验证；其他版本先用 `codex exec --help` 核对。`--ephemeral` 不持久化本次会话文件，`--ignore-user-config` 忽略用户配置但仍使用现有登录凭据。参数说明见 [Codex 官方命令行参考](https://developers.openai.com/codex/cli/reference/)。
-
-先替换 SSH 地址、服务端项目路径和 `YOUR_CODEX_MODEL`（填写自己的账户已经可用的模型名）。确认本机 1187 / 1180 未占用后，将整个代码块在 **Bash** 中执行：
-
-```bash
-(
-  set -e
-  umask 077
-  xray_ssh='root@YOUR_SERVER_IP'
-  xray_remote_dir='/root/docker-v2ray/xray'
-  codex_test_model='YOUR_CODEX_MODEL'
-  xray_test_dir="$(mktemp -d -t xray-codex-test.XXXXXXXX)"
-  xray_test_pid=''
-  cleanup_xray_test() {
-    if [ -n "$xray_test_pid" ]; then
-      kill "$xray_test_pid" 2>/dev/null || true
-      wait "$xray_test_pid" 2>/dev/null || true
-    fi
-    rm -rf -- "$xray_test_dir"
-  }
-  trap cleanup_xray_test EXIT
-  trap 'exit 130' INT
-  trap 'exit 143' TERM
-
-  mkdir -p "$xray_test_dir/work"
-  scp "$xray_ssh:$xray_remote_dir/install-client.sh" "$xray_test_dir/"
-  bash "$xray_test_dir/install-client.sh" "$xray_test_dir/bin"
-  scp "$xray_ssh:$xray_remote_dir/.runtime/client.json" "$xray_test_dir/client.json"
-  chmod 600 "$xray_test_dir/client.json"
-  "$xray_test_dir/bin/xray" run -test -config "$xray_test_dir/client.json"
-  "$xray_test_dir/bin/xray" run -config "$xray_test_dir/client.json" \
-    >"$xray_test_dir/xray.log" 2>&1 &
-  xray_test_pid=$!
-  sleep 1
-  kill -0 "$xray_test_pid" 2>/dev/null || {
-    cat "$xray_test_dir/xray.log"
-    exit 1
-  }
-
-  curl --fail --noproxy '' --proxy http://127.0.0.1:1187 \
-    --connect-timeout 10 --max-time 30 https://www.cloudflare.com/cdn-cgi/trace
-
-  env HTTP_PROXY=http://127.0.0.1:1187 \
-      HTTPS_PROXY=http://127.0.0.1:1187 \
-      ALL_PROXY=http://127.0.0.1:1187 \
-      http_proxy=http://127.0.0.1:1187 \
-      https_proxy=http://127.0.0.1:1187 \
-      all_proxy=http://127.0.0.1:1187 \
-      NO_PROXY=localhost,127.0.0.1,::1 \
-      no_proxy=localhost,127.0.0.1,::1 \
-      codex exec --ephemeral --ignore-user-config --ignore-rules \
-      --sandbox read-only --skip-git-repo-check \
-      -C "$xray_test_dir/work" -m "$codex_test_model" \
-      -c 'model_provider="openai"' -c 'model_reasoning_effort="low"' \
-      '只回复 PROXY_OK，不要调用任何工具或读取、修改文件。'
-)
-```
-
-预期：curl 返回 VPS 出口地址，Codex 返回 `PROXY_OK`。客户端进程、配置和下载的二进制在该代码块退出时一并删除；服务端继续按原状态运行。执行日志仍可能留在终端滚屏中，不要将含节点参数或账号信息的输出发到公开仓库。详细实测范围见 [验证摘要](#xray-validation)。
-
-若下载 GitHub 发布包需要现有代理，可仅将安装器那行改为 `HTTPS_PROXY=http://127.0.0.1:1087 bash "$xray_test_dir/install-client.sh" "$xray_test_dir/bin"`，端口按已有客户端实际值填写。若新客户端使用了其他本地端口，也要同步调整测试命令。
-
 #### 安装固定版本并复制配置
 
 以下命令在本机 Linux 执行。依赖 `bash`、`curl`、`sha256sum`、`python3`、`install`、`scp`。支持 x86_64 和 arm64。
 
+本例显式指定安装目录为 `~/xray-client`，程序为 `~/xray-client/xray`，配置为 `~/xray-client/config.json`。安装脚本的第一个参数就是安装目录；如需换目录，请同步调整下文的配置、启动和后台服务路径。
+
 ```bash
 mkdir -p ~/xray-client-setup
 scp root@YOUR_SERVER_IP:/root/docker-v2ray/xray/install-client.sh ~/xray-client-setup/
-bash ~/xray-client-setup/install-client.sh
+bash ~/xray-client-setup/install-client.sh ~/xray-client
 scp root@YOUR_SERVER_IP:/root/docker-v2ray/xray/.runtime/client.json \
-  ~/.local/share/xray-client/config.json
-chmod 600 ~/.local/share/xray-client/config.json
+  ~/xray-client/config.json
+chmod 600 ~/xray-client/config.json
 ```
 
 安装器从官方 release 下载 **26.3.27**，并核对写死的 SHA-256；摘要不匹配则停止。现有 `xray` 文件不会被覆盖。若下载需要代理，可以临时沿用旧客户端：
 
 ```bash
-HTTPS_PROXY=http://127.0.0.1:1087 bash ~/xray-client-setup/install-client.sh
+HTTPS_PROXY=http://127.0.0.1:1087 bash ~/xray-client-setup/install-client.sh ~/xray-client
 ```
 
 原来的 V2Ray 4.22.1 不能用于运行本说明中的 REALITY 配置。这里下载的是独立 Xray 客户端。
@@ -272,7 +208,7 @@ HTTPS_PROXY=http://127.0.0.1:1087 bash ~/xray-client-setup/install-client.sh
 #### 先前台运行并验证
 
 ```bash
-cd ~/.local/share/xray-client
+cd ~/xray-client
 ./xray version
 ./xray run -test -config config.json
 ./xray run -config config.json
@@ -289,11 +225,11 @@ curl --noproxy '' --proxy socks5h://127.0.0.1:1180 \
 
 响应中的 `ip=` 应是 VPS 出口地址。SOCKS 使用 `socks5h`，让目标网站的域名通过代理端解析。短请求通过仅说明基本连通，还需用 Codex 实际使用一段时间确认长连接表现。
 
-配置默认只绑定 `127.0.0.1`；1187 / 1180 与原有 1087 / 1080 分开。若端口被占用，可修改本机 `config.json` 的两个入站端口，并同步下面的代理环境变量。
+若客户端本地端口被占用，可修改本机 `config.json` 的两个入站端口，并同步下面的代理环境变量；监听地址保持为 `127.0.0.1`。
 
 #### 后台运行：systemd 用户服务
 
-前台验证后按 Ctrl+C 退出，再创建用户服务：
+前台验证后按 Ctrl+C 退出，再创建用户服务。服务文件中的 `%h/xray-client` 对应上面指定的 `~/xray-client`，其中 `%h` 表示当前用户的主目录：
 
 ```bash
 mkdir -p ~/.config/systemd/user
@@ -302,7 +238,7 @@ cat > ~/.config/systemd/user/xray-client.service <<'EOF'
 Description=Xray REALITY client
 
 [Service]
-ExecStart=%h/.local/share/xray-client/xray run -config %h/.local/share/xray-client/config.json
+ExecStart=%h/xray-client/xray run -config %h/xray-client/config.json
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true
@@ -328,7 +264,7 @@ systemctl --user stop xray-client.service
 不要和前台进程或 systemd 服务同时启动。以下示例在进程仍存在时拒绝重复启动：
 
 ```bash
-cd ~/.local/share/xray-client
+cd ~/xray-client
 if test -s xray.pid && kill -0 "$(cat xray.pid)" 2>/dev/null; then
   printf 'PID 文件中的进程仍存在，请先核对进程。\n'
 else
@@ -342,7 +278,7 @@ fi
 停止时先核对 PID 指向本目录的 Xray，避免误停其他进程：
 
 ```bash
-cd ~/.local/share/xray-client
+cd ~/xray-client
 xray_pid="$(cat xray.pid)"
 if test "$(readlink "/proc/$xray_pid/exe")" = "$PWD/xray"; then
   kill "$xray_pid"
@@ -513,7 +449,7 @@ sudo tcpdump -ni YOUR_UPLINK_IFACE \
 以下为 **2026-09-30** 的验证记录，不代表长期线路质量或所有平台均已实测：
 
 - Linux amd64 的 Xray 26.3.27 镜像及原生客户端配置检查、固定摘要校验、HTTP / SOCKS5h 实际代理访问通过，出口确认为测试 VPS。重复初始化被拒绝，重复 `up` 复用容器；端口占用、目标不匹配、其他目录的同名项目及凭据隔离检查通过。
-- Linux 上使用 Codex CLI **0.156.0**，经临时 HTTP 1187 → VPS TCP 8443 → OpenAI 完成真实请求，返回 `PROXY_OK`，约 **19.1 秒**；连接日志确认请求进入新代理。测试后客户端、服务端临时资源及凭据已清理，本机持久配置和旧服务保持原样。复现见[临时测试步骤](#xray-temp-test)。
+- Linux 上使用 Codex CLI **0.156.0**，经临时 HTTP 1187 → VPS TCP 8443 → OpenAI 完成真实请求，返回 `PROXY_OK`，约 **19.1 秒**；连接日志确认请求进入新代理。测试后客户端、服务端临时资源及凭据已清理，本机持久配置和旧服务保持原样。日常使用见[Codex 进程代理配置](#xray-codex)。
 - 依赖安装器 **15 项隔离测试通过**；7 个系统版本 × 2 种架构的 **56 个固定 Docker 包版本**均在官方仓库中找到。Ubuntu 20.04 / Debian 13 amd64 容器的基础依赖实际安装及固定 Docker 包的 APT 模拟安装通过；未在容器中启动 Docker daemon。
 - Debian 13 amd64 VPS 上重复运行安装器、`--check`、`--dry-run` 均通过，已有 Docker 29.6.2 / Compose 5.3.1 被复用；临时 Compose 2.35.1 的摘要校验及 Docker API 访问也通过。其他系统与 arm64 仅核对安装分支、软件包和摘要，尚未逐一完成全新 VPS 安装。
 - iPhone / Shadowrocket 和各平台 DNS 防泄漏未全部实机验证；DNS 设置依据所列版本的官方配置逻辑核对，仍需结合设备日志和实际流量验证。目标网站的 TLS 检查也不能替代 REALITY 实际访问测试。
