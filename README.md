@@ -117,7 +117,7 @@ iOS 以 **Shadowrocket 2.2.92** 为兼容性参考。当前选择用于避开该
 | Linux 命令行 | 本项目 [固定版本 Xray 安装器](xray/install-client.sh) | 支持 amd64 / arm64，复制配置并启动，详见 [Linux 说明](#xray-linux) |
 | Linux 桌面 | [v2rayN](https://github.com/2dust/v2rayN/releases) | 按发行版和架构选择包，配置方法与 Windows / macOS 一致 |
 | Android | [v2rayNG](https://github.com/2dust/v2rayNG/releases) | 导入 VLESS 链接，选择节点并启动 VPN |
-| iOS / iPadOS | [Shadowrocket（小火箭）](https://apps.apple.com/us/app/shadowrocket/id932747118) | 从剪贴板导入，核对 REALITY / Vision，允许 VPN；见下文的小火箭步骤 |
+| iOS / iPadOS | [Shadowrocket（小火箭）](https://apps.apple.com/us/app/shadowrocket/id932747118) | 从剪贴板导入，在节点的 TLS 页面核对公钥、短 ID 和 XTLS；见[小火箭步骤](#xray-ios) |
 
 桌面与 Android 客户端从项目官方 Release 选择正式版本，并记录应用及内核版本；上表不是自动下载“最新版”的安装脚本。图形客户端自带的内核不受本仓库安装器固定，更新后应重新验证。v2rayN 的系统要求和各安装包区别见其[官方说明](https://github.com/2dust/v2rayN/wiki/Release-files-introduction)，v2rayNG 的使用说明见[官方 Wiki](https://github.com/2dust/v2rayNG/wiki)。
 
@@ -133,7 +133,7 @@ iOS 以 **Shadowrocket 2.2.92** 为兼容性参考。当前选择用于避开该
 | UUID | `YOUR_UUID`，由脚本随机生成 |
 | VLESS 加密 | `none` |
 | 传输 | TCP；Xray 配置中的 `raw` 表示此传输 |
-| 安全层 | `REALITY` |
+| 安全层 | `REALITY`；小火箭在节点的 TLS 页面配置，见[界面字段对照](#xray-ios) |
 | Flow / 流控 | `xtls-rprx-vision` |
 | SNI / Server Name | 与服务端 `--sni` 一致，例如 `www.amazon.com` |
 | Public Key / 公钥 | 链接中的 `pbk`，或客户端配置中的 `publicKey` |
@@ -158,13 +158,33 @@ iOS 以 **Shadowrocket 2.2.92** 为兼容性参考。当前选择用于避开该
 3. 选中节点，核对上表参数，启动连接并允许 Android 的 VPN 请求。
 4. 检查应用分流没有排除待测试应用，再打开 HTTPS 网站验证。延迟测试只作辅助。
 
+<a id="xray-ios"></a>
+
 ### iOS / iPadOS：Shadowrocket（小火箭）
 
-1. 安装 Shadowrocket，复制 `vless://` 链接后在应用中从剪贴板导入。
-2. 类型选择 **VLESS**，核对 TCP、REALITY、`xtls-rprx-vision`、SNI、Public Key、Short ID，关闭 Mux。
-3. 选中节点并开启连接，首次使用允许添加 VPN 配置。先让测试网站明确走代理，验证成功后再按需要配置规则分流。
+兼容性参考版本为 **Shadowrocket 2.2.92**。
 
-兼容性参考版本为 **Shadowrocket 2.2.92**，类型选择 VLESS，不是 Shadowsocks。SNI 保持服务端目标域名，不能改为 VPS IP；地址仍填 VPS IP。先完成实际网站访问，再切换规则分流；DNS 另按[小火箭 DNS 设置](#ios-dns)配置。分享排错截图时隐藏地址、UUID、公钥、Short ID 和二维码。
+1. 安装 Shadowrocket，复制服务器生成的完整 `vless://` 链接，在应用中从剪贴板导入。
+2. 在**首页 → 节点右侧 ⓘ**进入编辑页面，确认类型为 **VLESS**，地址、端口和 UUID 与导入链接一致。
+3. 点击 **TLS** 进入其设置页面，核对下表。
+
+**REALITY 是上表中的协议名称。小火箭将它的公钥、短 ID 等参数放在节点的 TLS 页面，通常没有单独叫“安全层 REALITY”的选项。** 按这些字段核对即可：
+
+| 小火箭 TLS 页面字段 | 本项目应使用的值 |
+| --- | --- |
+| TLS | 开启 |
+| XTLS | `xtls-rprx-vision`，对应链接中的 `flow` |
+| SNI | 链接中的 `sni`，与服务端 `--sni` 一致，例如 `www.amazon.com` |
+| 公钥 / Public Key | 链接中的 `pbk`，或 `.runtime/client.json` 中的 `publicKey` |
+| 短 ID / Short ID | 链接中的 `sid`，或 `.runtime/client.json` 中的 `shortId` |
+| 允许不安全 / Allow Insecure | 关闭 |
+| ALPN | 留空，使用默认协商 |
+
+完整链接导入后，公钥、短 ID、SNI 和 XTLS 应自动填入；如果缺失，先重新复制完整链接导入，再对照服务器生成的客户端配置核对。SNI 使用服务端目标域名，节点地址使用 VPS IP。字段名称参考 [Shadowrocket 的 VLESS + Vision + REALITY 配置示例](https://github.com/chika0801/Xray-examples/blob/main/VLESS-Vision-REALITY/README.md#shadowrocket---v2231-及以上版本-配置示例)。
+
+返回节点编辑页面，**传输方式选择 `none` / 无**，表示使用 TCP、不额外套用 WebSocket 或 gRPC，与链接中的 `type=tcp` 对应；关闭**多路复用 / Mux**，保存。选中节点并开启连接，首次使用允许添加 VPN 配置。先让测试网站明确走代理并验证实际 HTTPS 访问，再按需要配置规则分流；DNS 另按[小火箭 DNS 设置](#ios-dns)配置。
+
+分享排错截图时隐藏地址、UUID、公钥、Short ID 和二维码。
 
 <a id="xray-linux"></a>
 
@@ -197,7 +217,11 @@ scp root@YOUR_SERVER_IP:/root/docker-v2ray/xray/.runtime/client.json \
 chmod 600 ~/xray-client/config.json
 ```
 
-安装器从官方 release 下载 **26.3.27**，并核对写死的 SHA-256；摘要不匹配则停止。现有 `xray` 文件不会被覆盖。若下载需要代理，可以临时沿用旧客户端：
+安装器从官方 release 下载 **26.3.27**，并核对写死的 SHA-256；摘要不匹配则删除损坏缓存并停止，请重新运行安装命令。现有 `xray` 文件不会被覆盖。
+
+下载默认启用断点续传：缓存放在 `${XDG_CACHE_HOME:-$HOME/.cache}/xray-client/v26.3.27/`，不同架构使用不同文件。超时、断网或按 Ctrl+C 中断后，重新执行上面的 `bash` 安装命令即可继续。单次下载最多 30 分钟；连续 120 秒低于 1 KiB/s 时重连，每次运行最多尝试 4 次，自动重试也保留已有进度。完整且通过校验的缓存可直接复用；若下载源不支持续传，则自动从头下载。
+
+若下载需要代理，可以临时沿用旧客户端：
 
 ```bash
 HTTPS_PROXY=http://127.0.0.1:1087 bash ~/xray-client-setup/install-client.sh ~/xray-client
