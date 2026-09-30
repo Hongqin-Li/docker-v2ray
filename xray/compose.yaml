@@ -1,0 +1,23 @@
+services:
+  xray:
+    image: ${XRAY_IMAGE:?Run deploy.sh init first}
+    command: ["run", "-config", "/etc/xray/config.json"]
+    user: "65532:65532"
+    restart: unless-stopped
+    ports:
+      - "${XRAY_LISTEN_IP:-0.0.0.0}:${XRAY_PORT:-8443}:8443/tcp"
+    volumes:
+      - ./.runtime/server.json:/etc/xray/config.json:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=8m,mode=1777
+      - /usr/local/etc/xray:size=1m,mode=755
+      - /var/log/xray:size=1m,mode=755
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
