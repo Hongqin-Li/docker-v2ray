@@ -2,7 +2,7 @@ version: '3'
 
 services:
   nginx:
-    image: nginx:latest
+    image: nginx:1.30.4-alpine
     container_name: nginx
     restart: unless-stopped
     volumes:
@@ -19,7 +19,7 @@ services:
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   certbot:
-    image: certbot/certbot
+    image: certbot/certbot:v3.3.0
     container_name: certbot
     restart: unless-stopped
     volumes:
